@@ -24,6 +24,10 @@ impl Command for ErrorMake {
         "Create an error."
     }
 
+    fn search_terms(&self) -> Vec<&str> {
+        vec!["err", "panic", "crash", "throw"]
+    }
+
     fn run(
         &self,
         engine_state: &EngineState,
@@ -36,26 +40,30 @@ impl Command for ErrorMake {
         let arg: Option<Value> = call.opt(engine_state, stack, 0)?;
 
         if let Some(arg) = arg {
-            Ok(make_error(&arg)
+            Ok(make_error(&arg, span)
                 .map(|err| Value::Error { error: err })
                 .unwrap_or_else(|| Value::Error {
-                    error: ShellError::SpannedLabeledError(
+                    error: ShellError::GenericError(
                         "Creating error value not supported.".into(),
                         "unsupported error format".into(),
-                        span,
+                        Some(span),
+                        None,
+                        Vec::new(),
                     ),
                 })
                 .into_pipeline_data())
         } else {
             input.map(
                 move |value| {
-                    make_error(&value)
+                    make_error(&value, span)
                         .map(|err| Value::Error { error: err })
                         .unwrap_or_else(|| Value::Error {
-                            error: ShellError::SpannedLabeledError(
+                            error: ShellError::GenericError(
                                 "Creating error value not supported.".into(),
                                 "unsupported error format".into(),
-                                span,
+                                Some(span),
+                                None,
+                                Vec::new(),
                             ),
                         })
                 },
@@ -85,7 +93,7 @@ impl Command for ErrorMake {
     }
 }
 
-fn make_error(value: &Value) -> Option<ShellError> {
+fn make_error(value: &Value, throw_span: Span) -> Option<ShellError> {
     if let Value::Record { .. } = &value {
         let msg = value.get_data_by_key("msg");
         let label = value.get_data_by_key("label");
@@ -103,20 +111,39 @@ fn make_error(value: &Value) -> Option<ShellError> {
                         Some(Value::String {
                             val: label_text, ..
                         }),
-                    ) => Some(ShellError::SpannedLabeledError(
+                    ) => Some(ShellError::GenericError(
                         message,
                         label_text,
-                        Span {
+                        Some(Span {
                             start: start as usize,
                             end: end as usize,
-                        },
+                        }),
+                        None,
+                        Vec::new(),
+                    )),
+                    (
+                        None,
+                        None,
+                        Some(Value::String {
+                            val: label_text, ..
+                        }),
+                    ) => Some(ShellError::GenericError(
+                        message,
+                        label_text,
+                        Some(throw_span),
+                        None,
+                        Vec::new(),
                     )),
                     _ => None,
                 }
             }
-            (Some(Value::String { val: message, .. }), None) => {
-                Some(ShellError::UnlabeledError(message))
-            }
+            (Some(Value::String { val: message, .. }), None) => Some(ShellError::GenericError(
+                message,
+                "originates from here".to_string(),
+                Some(throw_span),
+                None,
+                Vec::new(),
+            )),
             _ => None,
         }
     } else {

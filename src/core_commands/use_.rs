@@ -24,8 +24,8 @@ impl Command for Use {
     }
 
     fn extra_usage(&self) -> &str {
-        r#"This command is a parser keyword. For details, check
-https://www.nushell.sh/book/thinking_in_nushell.html#parsing-and-evaluation-are-different-stages"#
+        r#"This command is a parser keyword. For details, check:
+  https://www.nushell.sh/book/thinking_in_nushell.html"#
     }
 
     fn is_parser_keyword(&self) -> bool {
@@ -46,27 +46,29 @@ https://www.nushell.sh/book/thinking_in_nushell.html#parsing-and-evaluation-are-
         {
             pat
         } else {
-            return Err(ShellError::SpannedLabeledError(
+            return Err(ShellError::GenericError(
                 "Unexpected import".into(),
                 "import pattern not supported".into(),
-                call.head,
+                Some(call.head),
+                None,
+                Vec::new(),
             ));
         };
 
-        if let Some(overlay_id) = import_pattern.head.id {
-            let overlay = engine_state.get_overlay(overlay_id);
+        if let Some(module_id) = import_pattern.head.id {
+            let module = engine_state.get_module(module_id);
 
             let env_vars_to_use = if import_pattern.members.is_empty() {
-                overlay.env_vars_with_head(&import_pattern.head.name)
+                module.env_vars_with_head(&import_pattern.head.name)
             } else {
                 match &import_pattern.members[0] {
-                    ImportPatternMember::Glob { .. } => overlay.env_vars(),
+                    ImportPatternMember::Glob { .. } => module.env_vars(),
                     ImportPatternMember::Name { name, span } => {
                         let mut output = vec![];
 
-                        if let Some(id) = overlay.get_env_var_id(name) {
+                        if let Some(id) = module.get_env_var_id(name) {
                             output.push((name.clone(), id));
-                        } else if !overlay.has_decl(name) && !overlay.has_alias(name) {
+                        } else if !module.has_decl(name) && !module.has_alias(name) {
                             return Err(ShellError::EnvVarNotFoundAtRuntime(
                                 String::from_utf8_lossy(name).into(),
                                 *span,
@@ -79,9 +81,9 @@ https://www.nushell.sh/book/thinking_in_nushell.html#parsing-and-evaluation-are-
                         let mut output = vec![];
 
                         for (name, span) in names {
-                            if let Some(id) = overlay.get_env_var_id(name) {
+                            if let Some(id) = module.get_env_var_id(name) {
                                 output.push((name.clone(), id));
-                            } else if !overlay.has_decl(name) && !overlay.has_alias(name) {
+                            } else if !module.has_decl(name) && !module.has_alias(name) {
                                 return Err(ShellError::EnvVarNotFoundAtRuntime(
                                     String::from_utf8_lossy(name).into(),
                                     *span,
@@ -103,8 +105,6 @@ https://www.nushell.sh/book/thinking_in_nushell.html#parsing-and-evaluation-are-
 
                 let block = engine_state.get_block(block_id);
 
-                // TODO: Add string conversions (e.g. int to string)
-                // TODO: Later expand env to take all Values
                 let val = eval_block(
                     engine_state,
                     stack,
@@ -120,13 +120,15 @@ https://www.nushell.sh/book/thinking_in_nushell.html#parsing-and-evaluation-are-
         } else {
             // TODO: This is a workaround since call.positional[0].span points at 0 for some reason
             // when this error is triggered
-            return Err(ShellError::SpannedLabeledError(
+            return Err(ShellError::GenericError(
                 format!(
                     "Could not import from '{}'",
                     String::from_utf8_lossy(&import_pattern.head.name)
                 ),
                 "module does not exist".to_string(),
-                import_pattern.head.span,
+                Some(import_pattern.head.span),
+                None,
+                Vec::new(),
             ));
         }
 

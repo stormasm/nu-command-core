@@ -16,13 +16,6 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
             };
         }
 
-        // If there are commands that have the same name as default declarations,
-        // they have to be registered before the main declarations. This helps to make
-        // them only accessible if the correct input value category is used with the
-        // declaration
-        #[cfg(feature = "dataframe")]
-        add_dataframe_decls(&mut working_set);
-
         // Core
         bind_command! {
             Alias,
@@ -44,9 +37,14 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
             For,
             Help,
             Hide,
-            History,
+            //History,
             If,
             Ignore,
+            Overlay,
+            OverlayAdd,
+            OverlayList,
+            OverlayNew,
+            OverlayRemove,
             Let,
             Metadata,
             Module,
@@ -55,11 +53,6 @@ pub fn create_default_context(cwd: impl AsRef<Path>) -> EngineState {
             Use,
             //Version,
         };
-
-        // Viewers
-        // bind_command! {
-        //    Table,
-        // };
 
         working_set.render()
     };

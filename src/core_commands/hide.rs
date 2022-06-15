@@ -25,9 +25,8 @@ impl Command for Hide {
     fn extra_usage(&self) -> &str {
         r#"Symbols are hidden by priority: First aliases, then custom commands, then environment variables.
 
-This command is a parser keyword. For details, check
-https://www.nushell.sh/book/thinking_in_nushell.html#parsing-and-evaluation-are-different-stages
-            "#
+This command is a parser keyword. For details, check:
+  https://www.nushell.sh/book/thinking_in_nushell.html"#
     }
 
     fn is_parser_keyword(&self) -> bool {
@@ -48,10 +47,12 @@ https://www.nushell.sh/book/thinking_in_nushell.html#parsing-and-evaluation-are-
         {
             pat
         } else {
-            return Err(ShellError::SpannedLabeledError(
+            return Err(ShellError::GenericError(
                 "Unexpected import".into(),
                 "import pattern not supported".into(),
-                call.head,
+                Some(call.head),
+                None,
+                Vec::new(),
             ));
         };
 
@@ -61,23 +62,23 @@ https://www.nushell.sh/book/thinking_in_nushell.html#parsing-and-evaluation-are-
             return Err(ShellError::NonUtf8(import_pattern.head.span));
         };
 
-        if let Some(overlay_id) = engine_state.find_overlay(&import_pattern.head.name) {
+        if let Some(module_id) = engine_state.find_module(&import_pattern.head.name, &[]) {
             // The first word is a module
-            let overlay = engine_state.get_overlay(overlay_id);
+            let module = engine_state.get_module(module_id);
 
             let env_vars_to_hide = if import_pattern.members.is_empty() {
-                overlay.env_vars_with_head(&import_pattern.head.name)
+                module.env_vars_with_head(&import_pattern.head.name)
             } else {
                 match &import_pattern.members[0] {
-                    ImportPatternMember::Glob { .. } => overlay.env_vars(),
+                    ImportPatternMember::Glob { .. } => module.env_vars(),
                     ImportPatternMember::Name { name, span } => {
                         let mut output = vec![];
 
                         if let Some((name, id)) =
-                            overlay.env_var_with_head(name, &import_pattern.head.name)
+                            module.env_var_with_head(name, &import_pattern.head.name)
                         {
                             output.push((name, id));
-                        } else if !(overlay.has_alias(name) || overlay.has_decl(name)) {
+                        } else if !(module.has_alias(name) || module.has_decl(name)) {
                             return Err(ShellError::EnvVarNotFoundAtRuntime(
                                 String::from_utf8_lossy(name).into(),
                                 *span,
@@ -91,10 +92,10 @@ https://www.nushell.sh/book/thinking_in_nushell.html#parsing-and-evaluation-are-
 
                         for (name, span) in names {
                             if let Some((name, id)) =
-                                overlay.env_var_with_head(name, &import_pattern.head.name)
+                                module.env_var_with_head(name, &import_pattern.head.name)
                             {
                                 output.push((name, id));
-                            } else if !(overlay.has_alias(name) || overlay.has_decl(name)) {
+                            } else if !(module.has_alias(name) || module.has_decl(name)) {
                                 return Err(ShellError::EnvVarNotFoundAtRuntime(
                                     String::from_utf8_lossy(name).into(),
                                     *span,

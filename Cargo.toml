@@ -4,20 +4,22 @@ description = "Nushell's built-in commands"
 edition = "2021"
 license = "MIT"
 name = "nu-command"
-version = "0.61.0"
+version = "0.64.0"
 
 [dependencies]
-nu-color-config = { version = "0.61.0"  }
-nu-engine = { version = "0.61.0"  }
-nu-glob = { version = "0.61.0" }
-nu-json = { version = "0.61.0"  }
-nu-parser = { version = "0.61.0"  }
-nu-path = { version = "0.61.0"  }
-nu-pretty-hex = { version = "0.61.0"  }
-nu-protocol = { version = "0.61.0"  }
-nu-system = { version = "0.61.0"  }
-nu-table = { version = "0.61.0"  }
-nu-term-grid = { version = "0.61.0"  }
-nu-test-support = { version = "0.61.0"  }
-nu-utils = { version = "0.61.0" }
-nu-ansi-term = "0.45.1"
+nu-color-config = { version = "0.64.0"  }
+nu-engine = { version = "0.64.0"  }
+nu-glob = { version = "0.64.0" }
+nu-json = { version = "0.64.0"  }
+nu-parser = { version = "0.64.0"  }
+nu-path = { version = "0.64.0"  }
+nu-pretty-hex = { version = "0.64.0"  }
+nu-protocol = { version = "0.64.0"  }
+nu-system = { version = "0.64.0"  }
+nu-table = { version = "0.64.0"  }
+nu-term-grid = { version = "0.64.0"  }
+nu-test-support = { version = "0.64.0"  }
+nu-utils = { version = "0.64.0" }
+nu-ansi-term = "0.46.0"
+
+log = "0.4.14"

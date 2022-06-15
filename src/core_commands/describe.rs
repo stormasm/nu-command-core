@@ -13,7 +13,7 @@ impl Command for Describe {
     }
 
     fn usage(&self) -> &str {
-        "Describe the value(s) piped in."
+        "Describe the type and structure of the value(s) piped in."
     }
 
     fn signature(&self) -> Signature {
@@ -35,8 +35,13 @@ impl Command for Describe {
             ))
         } else {
             let value = input.into_value(call.head);
+            let description = match value {
+                Value::CustomValue { val, .. } => val.value_string(),
+                _ => value.get_type().to_string(),
+            };
+
             Ok(Value::String {
-                val: value.get_type().to_string(),
+                val: description,
                 span: head,
             }
             .into_pipeline_data())
@@ -49,6 +54,10 @@ impl Command for Describe {
             example: "'hello' | describe",
             result: Some(Value::test_string("string")),
         }]
+    }
+
+    fn search_terms(&self) -> Vec<&str> {
+        vec!["type", "typeof", "info", "structure"]
     }
 }
 
